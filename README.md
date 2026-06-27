@@ -1,7 +1,7 @@
  <div align="center">
-  <img src="Sales Pro Logo.png" alt="Sales Pro" width="120" />
+  <img src="Sales Pro Logo.png" alt="Sales Pro" width="100" />
   </div>
-  
+
 <div align="center">
 
 # Sales Pro
