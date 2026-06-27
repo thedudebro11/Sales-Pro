@@ -1,0 +1,24 @@
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
+
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+VAULT_PATH = Path(os.getenv("VAULT_PATH", "C:/Users/oscar/ObsidianBrain"))
+WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base")
+CLAUDE_MODEL = "claude-sonnet-4-6"
+
+VAULT_DIRS = {
+    "videos":     VAULT_PATH / "sales/videos",
+    "tactics":    VAULT_PATH / "sales/tactics",
+    "hooks":      VAULT_PATH / "sales/hooks",
+    "objections": VAULT_PATH / "sales/objections",
+    "scripts":    VAULT_PATH / "sales/scripts",
+    "creators":   VAULT_PATH / "sales/creators",
+}
+
+def ensure_vault():
+    for d in VAULT_DIRS.values():
+        d.mkdir(parents=True, exist_ok=True)
+    (VAULT_PATH / "sales/_Index.md").touch(exist_ok=True)
