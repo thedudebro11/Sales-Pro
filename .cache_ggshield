@@ -1,1 +1,1 @@
-{"last_found_secrets": [{"match": "7dcce46c941e2df8add6b3a5baf393db65ca659112f653be7880d33c8104ed1d", "name": "Claude API Key - commit://staged/.env"}]}
+{"last_found_secrets": [{"name": "Claude API Key - commit://staged/.env", "match": "7dcce46c941e2df8add6b3a5baf393db65ca659112f653be7880d33c8104ed1d"}]}
