@@ -7,9 +7,87 @@ import config
 
 console = Console()
 
+_embed_model = None  # lazy singleton — loaded once per process
+
 
 def _slug(text: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_-]", "_", text)[:60]
+
+
+def _get_embed_model():
+    global _embed_model
+    if _embed_model is None:
+        try:
+            from sentence_transformers import SentenceTransformer
+            console.print("[dim]Loading embedding model (first run may take a moment)…[/dim]")
+            _embed_model = SentenceTransformer(config.EMBED_MODEL)
+        except ImportError:
+            return None
+    return _embed_model
+
+
+def _find_similar_tactic(name: str, description: str, threshold: float = 0.82) -> Path | None:
+    """Return an existing tactic note if TF-IDF cosine similarity >= threshold."""
+    existing = list(config.VAULT_DIRS["tactics"].glob("*.md"))
+    if not existing:
+        return None
+    try:
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.metrics.pairwise import cosine_similarity
+    except ImportError:
+        return None
+
+    corpus = [p.read_text(encoding="utf-8")[:500] for p in existing]
+    query = f"{name} {description}"
+    vectorizer = TfidfVectorizer().fit(corpus + [query])
+    tfidf = vectorizer.transform(corpus + [query])
+    sims = cosine_similarity(tfidf[-1:], tfidf[:-1])[0]
+    best_idx = int(sims.argmax())
+    return existing[best_idx] if sims[best_idx] >= threshold else None
+
+
+def _append_embedding(note_path: Path, content: str):
+    """Compute and append an embedding for a note to the JSONL index."""
+    model = _get_embed_model()
+    if model is None:
+        return
+    try:
+        embedding = model.encode(content[:1000]).tolist()
+        config.EMBEDDINGS_INDEX.parent.mkdir(parents=True, exist_ok=True)
+        with open(config.EMBEDDINGS_INDEX, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps({"path": str(note_path), "embedding": embedding}) + "\n")
+    except Exception:
+        pass  # embeddings are optional — never block the main pipeline
+
+
+def reindex_vault_embeddings():
+    """Rebuild .embeddings.jsonl from scratch by re-embedding all vault notes."""
+    model = _get_embed_model()
+    if model is None:
+        console.print("[yellow]sentence-transformers not installed — skipping reindex.[/yellow]")
+        console.print("Install with: pip install sentence-transformers")
+        return
+
+    config.ensure_vault()
+    all_notes = []
+    for folder_path in config.VAULT_DIRS.values():
+        all_notes.extend(folder_path.glob("*.md"))
+
+    if not all_notes:
+        console.print("[yellow]No notes found in vault.[/yellow]")
+        return
+
+    console.print(f"[cyan]Reindexing {len(all_notes)} notes…[/cyan]")
+    config.EMBEDDINGS_INDEX.parent.mkdir(parents=True, exist_ok=True)
+    config.EMBEDDINGS_INDEX.write_text("", encoding="utf-8")
+
+    for note in all_notes:
+        content = note.read_text(encoding="utf-8")[:1000]
+        embedding = model.encode(content).tolist()
+        with open(config.EMBEDDINGS_INDEX, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps({"path": str(note), "embedding": embedding}) + "\n")
+
+    console.print(f"[green]Reindex complete:[/green] {len(all_notes)} notes → {config.EMBEDDINGS_INDEX}")
 
 
 def _find_existing_note_by_url(url: str) -> Path | None:
@@ -60,7 +138,7 @@ def write_to_vault(data: dict) -> Path:
         f"> {line}" for line in data.get("transcript", "").split("\n")
     )
 
-    video_note.write_text(f"""---
+    video_note_content = f"""---
 date: {date}
 creator: "{creator}"
 url: "{url}"
@@ -106,7 +184,9 @@ tags:
 
 > [!note]- Full Transcript
 {transcript_quoted}
-""", encoding="utf-8")
+"""
+    video_note.write_text(video_note_content, encoding="utf-8")
+    _append_embedding(video_note, video_note_content)
 
     # ── 2. Tactic notes ─────────────────────────────────────────────────────
     for tactic in data.get("tactics", []):
@@ -118,7 +198,18 @@ tags:
                 encoding="utf-8"
             )
         else:
-            tactic_file.write_text(f"""# {tactic['name']}
+            similar = _find_similar_tactic(tactic["name"], tactic["description"])
+            if similar:
+                console.print(f"[yellow]Merged → {similar.stem}[/yellow] (similar to: {tactic['name']})")
+                existing_content = similar.read_text(encoding="utf-8").rstrip()
+                similar.write_text(
+                    existing_content
+                    + f"\n\n## Example Quote\n> \"{tactic['quote']}\"\n"
+                    + new_ref + "\n",
+                    encoding="utf-8",
+                )
+            else:
+                tactic_file.write_text(f"""# {tactic['name']}
 
 ## Definition
 {tactic['description']}
@@ -136,7 +227,7 @@ tags:
     # ── 3. Hook notes ───────────────────────────────────────────────────────
     for hook in data.get("hooks", []):
         hook_file = config.VAULT_DIRS["hooks"] / f"{_slug(hook['name'])}.md"
-        new_ref = f"\n- [[Videos/{date}_{video_id}]] — {data.get('title', '')}"
+        new_ref = f"\n- [[sales/videos/{date}_{video_id}]] — {data.get('title', '')}"
         if hook_file.exists():
             hook_file.write_text(
                 hook_file.read_text(encoding="utf-8").rstrip() + new_ref + "\n",
@@ -146,13 +237,13 @@ tags:
             hook_file.write_text(f"""# {hook['name']}
 
 ## Pattern
-
+{hook.get('pattern', '')}
 
 ## Example
 > "{hook['text']}"
 
 ## Why It Works
-
+{hook.get('why_it_works', '')}
 
 ## Related
 {new_ref}

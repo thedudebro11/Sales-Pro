@@ -8,6 +8,8 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 VAULT_PATH = Path(os.getenv("VAULT_PATH", "C:/Users/oscar/ObsidianBrain"))
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base")
 CLAUDE_MODEL = "claude-sonnet-4-6"
+EMBED_MODEL = "all-MiniLM-L6-v2"
+EMBEDDINGS_INDEX = VAULT_PATH / "sales" / ".embeddings.jsonl"
 
 VAULT_DIRS = {
     "videos":     VAULT_PATH / "sales/videos",

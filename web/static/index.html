@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales Pro</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0a; --surface: #141414; --surface2: #1e1e1e;
+      --border: #2a2a2a; --accent: #7c3aed; --accent-h: #6d28d9;
+      --text: #e8e8e8; --muted: #666;
+      --green: #22c55e; --red: #ef4444; --yellow: #f59e0b; --blue: #60a5fa;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; padding: 2.5rem 1.25rem 4rem;
+    }
+    header { text-align: center; margin-bottom: 2.5rem; }
+    header h1 {
+      font-size: 1.7rem; font-weight: 700; letter-spacing: -0.04em;
+      background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    header p { color: var(--muted); font-size: 0.85rem; margin-top: 0.35rem; }
+    .container { width: 100%; max-width: 680px; }
+    .tabs {
+      display: flex; gap: 2px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: 4px; margin-bottom: 1.5rem;
+    }
+    .tab {
+      flex: 1; padding: 0.55rem 1rem; border: none; background: none;
+      color: var(--muted); cursor: pointer; font-size: 0.875rem;
+      font-weight: 500; border-radius: 7px; transition: background 0.15s, color 0.15s;
+    }
+    .tab.active { background: var(--surface2); color: var(--text); }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; margin-bottom: 1rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    input[type="text"], textarea {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.6rem 0.85rem; color: var(--text);
+      font-size: 0.9rem; outline: none; transition: border-color 0.15s;
+      font-family: inherit;
+    }
+    textarea { resize: vertical; min-height: 110px; line-height: 1.6; }
+    input:focus, textarea:focus { border-color: var(--accent); }
+    input::placeholder, textarea::placeholder { color: var(--muted); }
+    .url-hint { font-size: 0.75rem; color: var(--muted); margin-top: 0.3rem; }
+    .btn-primary {
+      width: 100%; padding: 0.75rem; background: var(--accent); color: #fff;
+      border: none; border-radius: 9px; font-size: 0.92rem; font-weight: 600;
+      cursor: pointer; transition: background 0.15s, opacity 0.15s;
+      margin-top: 0.5rem; letter-spacing: -0.01em;
+    }
+    .btn-primary:hover { background: var(--accent-h); }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+    .log-area {
+      display: none; margin-top: 1.25rem; background: #000;
+      border: 1px solid var(--border); border-radius: 9px;
+      padding: 1rem 1.1rem; font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.8rem; line-height: 1.6; min-height: 100px; max-height: 380px; overflow-y: auto;
+    }
+    .log-line { margin: 0.2rem 0; }
+    .log-line.done    { color: var(--green); }
+    .log-line.skipped { color: var(--yellow); }
+    .log-line.error   { color: var(--red); }
+    .log-line.sep     { color: #333; border-top: 1px solid #222; margin: 0.4rem 0; padding-top: 0.4rem; }
+    .log-line.info    { color: var(--muted); }
+    .script-out {
+      display: none; margin-top: 1.25rem; background: #000;
+      border: 1px solid var(--border); border-radius: 9px; padding: 1.25rem;
+      white-space: pre-wrap; font-size: 0.84rem; line-height: 1.75;
+      max-height: 620px; overflow-y: auto; color: var(--text);
+    }
+    .stats-section { display: none; }
+    .stats-title { font-size: 0.8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem; }
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.65rem; }
+    .stat { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 0.75rem; text-align: center; }
+    .stat-num { font-size: 1.5rem; font-weight: 700; color: var(--accent); letter-spacing: -0.03em; }
+    .stat-label { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Sales Pro</h1>
+    <p>Instagram &amp; YouTube → Obsidian Sales Brain</p>
+  </header>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" data-tab="add" onclick="switchTab('add')">Add Video</button>
+      <button class="tab" data-tab="script" onclick="switchTab('script')">Generate Script</button>
+    </div>
+
+    <!-- ADD VIDEO -->
+    <div id="panel-add" class="panel active">
+      <div class="card">
+        <form onsubmit="submitAdd(event)">
+          <div class="form-group">
+            <label for="url-input">Video URLs</label>
+            <textarea id="url-input" placeholder="Paste one URL per line — as many as you want:&#10;https://www.instagram.com/reel/...&#10;https://www.youtube.com/watch?v=...&#10;https://www.instagram.com/reel/..." required></textarea>
+            <div class="url-hint">One URL per line. Duplicates are detected and skipped automatically.</div>
+          </div>
+          <button type="submit" class="btn-primary" id="add-btn">Process Videos</button>
+        </form>
+        <div class="log-area" id="add-log"></div>
+      </div>
+
+      <div class="card stats-section" id="brain-stats">
+        <div class="stats-title">Brain Stats</div>
+        <div class="stats-grid" id="stats-grid"></div>
+      </div>
+    </div>
+
+    <!-- GENERATE SCRIPT -->
+    <div id="panel-script" class="panel">
+      <div class="card">
+        <form onsubmit="submitScript(event)">
+          <div class="form-group">
+            <label for="product">What are you selling?</label>
+            <input id="product" type="text" placeholder="e.g. 1-on-1 Sales Coaching" required>
+          </div>
+          <div class="form-group">
+            <label for="audience">Target audience</label>
+            <input id="audience" type="text" placeholder="e.g. Freelancers who can't close deals" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="platform">Platform</label>
+              <input id="platform" type="text" placeholder="Instagram Reels / TikTok">
+            </div>
+            <div class="form-group">
+              <label for="tone">Tone</label>
+              <input id="tone" type="text" placeholder="Conversational and confident">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="goal">Goal / CTA</label>
+            <input id="goal" type="text" placeholder="Book a call / DM for more info">
+          </div>
+          <button type="submit" class="btn-primary" id="script-btn">Generate Script</button>
+        </form>
+        <pre class="script-out" id="script-out"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ICONS = {
+      starting:'▶', downloading:'⬇', extracting:'♪', transcribing:'◎',
+      analyzing:'◈', writing:'◉', done:'✓', skipped:'⊘', error:'✗', info:'·'
+    };
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(t =>
+        t.classList.toggle('active', t.dataset.tab === tab));
+      document.querySelectorAll('.panel').forEach(p =>
+        p.classList.toggle('active', p.id === `panel-${tab}`));
+    }
+
+    function logLine(el, text, cls = 'info') {
+      el.style.display = 'block';
+      const d = document.createElement('div');
+      d.className = `log-line ${cls}`;
+      const icon = ICONS[cls] ?? '·';
+      d.textContent = `${icon}  ${text}`;
+      el.appendChild(d);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function logSep(el, text) {
+      el.style.display = 'block';
+      const d = document.createElement('div');
+      d.className = 'log-line sep';
+      d.textContent = `── ${text}`;
+      el.appendChild(d);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function parseURLs(raw) {
+      return raw.split('\n')
+        .map(l => l.trim())
+        .filter(l => l && !l.startsWith('#'));
+    }
+
+    async function drainSSE(res, logEl, onDone) {
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const blocks = buf.split('\n\n');
+        buf = blocks.pop() ?? '';
+        for (const block of blocks) {
+          if (!block.startsWith('data: ')) continue;
+          const { stage, message } = JSON.parse(block.slice(6));
+          if (stage === 'done') {
+            const d = JSON.parse(message);
+            logLine(logEl, `Done! "${d.title}" — ${d.tactics} tactics, ${d.hooks} hooks`, 'done');
+            onDone?.();
+          } else if (stage === 'skipped') {
+            logLine(logEl, `Already in vault — skipped (${message})`, 'skipped');
+          } else if (stage === 'error') {
+            logLine(logEl, message, 'error');
+          } else {
+            logLine(logEl, message, 'info');
+          }
+        }
+      }
+    }
+
+    async function submitAdd(e) {
+      e.preventDefault();
+      const raw = document.getElementById('url-input').value;
+      const urls = parseURLs(raw);
+      if (!urls.length) return;
+
+      const btn = document.getElementById('add-btn');
+      const log = document.getElementById('add-log');
+      log.innerHTML = '';
+      log.style.display = 'block';
+      btn.disabled = true;
+      btn.textContent = urls.length > 1 ? `Processing ${urls.length} videos…` : 'Processing…';
+
+      try {
+        if (urls.length === 1) {
+          const res = await fetch('/api/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: urls[0] }),
+          });
+          await drainSSE(res, log, loadBrainStats);
+        } else {
+          // Show each URL as it starts
+          const res = await fetch('/api/batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ urls }),
+          });
+          // Batch SSE — inject separators when progress events arrive
+          const reader = res.body.getReader();
+          const dec = new TextDecoder();
+          let buf = '', urlIdx = 0;
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+            const blocks = buf.split('\n\n');
+            buf = blocks.pop() ?? '';
+            for (const block of blocks) {
+              if (!block.startsWith('data: ')) continue;
+              const { stage, message } = JSON.parse(block.slice(6));
+              if (stage === 'progress') {
+                urlIdx++;
+                logSep(log, `[${urlIdx}/${urls.length}] ${message}`);
+              } else if (stage === 'done') {
+                const d = JSON.parse(message);
+                logLine(log, `Done! "${d.title}" — ${d.tactics} tactics, ${d.hooks} hooks`, 'done');
+                loadBrainStats();
+              } else if (stage === 'skipped') {
+                logLine(log, `Already in vault — skipped`, 'skipped');
+              } else if (stage === 'error') {
+                logLine(log, message, 'error');
+              } else {
+                logLine(log, message, 'info');
+              }
+            }
+          }
+        }
+      } catch (err) {
+        logLine(log, err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Process Videos';
+      }
+    }
+
+    async function submitScript(e) {
+      e.preventDefault();
+      const btn = document.getElementById('script-btn');
+      const out = document.getElementById('script-out');
+      btn.disabled = true; btn.textContent = 'Generating…';
+      out.style.display = 'none';
+      try {
+        const res = await fetch('/api/script', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            product:  document.getElementById('product').value,
+            audience: document.getElementById('audience').value,
+            platform: document.getElementById('platform').value || 'Instagram Reels / TikTok',
+            tone:     document.getElementById('tone').value     || 'Conversational and confident',
+            goal:     document.getElementById('goal').value     || 'Book a call / DM for more info',
+          }),
+        });
+        const data = await res.json();
+        out.textContent = data.script;
+        out.style.display = 'block';
+      } catch (err) {
+        out.textContent = `Error: ${err.message}`;
+        out.style.display = 'block';
+      } finally {
+        btn.disabled = false; btn.textContent = 'Generate Script';
+      }
+    }
+
+    async function loadBrainStats() {
+      try {
+        const data = await (await fetch('/api/brain')).json();
+        const labels = { videos:'Videos', tactics:'Tactics', hooks:'Hooks',
+                         objections:'Objections', scripts:'Scripts', creators:'Creators' };
+        document.getElementById('stats-grid').innerHTML =
+          Object.entries(data).map(([k, v]) => `
+            <div class="stat"><div class="stat-num">${v}</div><div class="stat-label">${labels[k]??k}</div></div>
+          `).join('');
+        document.getElementById('brain-stats').style.display = 'block';
+      } catch (_) {}
+    }
+
+    loadBrainStats();
+  </script>
+</body>
+</html>

@@ -3,9 +3,12 @@
 Sales Pro — Instagram → Sales Brain → Script Generator
 
 Usage:
-  python main.py add <instagram_url>          # Download, transcribe, analyze, add to brain
-  python main.py script                       # Generate a sales script from the brain
-  python main.py brain                        # Show brain stats
+  python main.py add <url>             # Download, transcribe, analyze, add to brain
+  python main.py batch <file.txt>      # Process multiple URLs from a text file
+  python main.py script                # Generate a sales script from the brain
+  python main.py brain                 # Show brain stats
+  python main.py reindex               # Rebuild semantic embeddings index
+  python main.py serve [--port 8000]   # Launch web UI
 """
 
 import sys
@@ -17,6 +20,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 console = Console()
+
 
 
 def cmd_add(url: str):
@@ -61,6 +65,84 @@ def cmd_script():
     console.print(Panel(script, title=f"Sales Script: {product}", expand=False))
 
 
+def cmd_batch(filepath: str):
+    """Process a text file of URLs — one per line, # for comments."""
+    from pipeline.vault_writer import _find_existing_note_by_url
+
+    batch_file = Path(filepath)
+    if not batch_file.exists():
+        console.print(f"[red]File not found:[/red] {filepath}")
+        return
+
+    raw_lines = batch_file.read_text(encoding="utf-8").splitlines()
+    urls = [l.strip() for l in raw_lines if l.strip() and not l.strip().startswith("#")]
+
+    if not urls:
+        console.print("[yellow]No URLs found in file.[/yellow]")
+        return
+
+    console.print(Panel(f"[bold]{len(urls)} URLs[/bold] to process from [cyan]{filepath}[/cyan]", title="Sales Pro Batch"))
+
+    processed = skipped = failed = 0
+    failed_urls: list[str] = []
+
+    for i, url in enumerate(urls, 1):
+        console.rule(f"[bold cyan][{i}/{len(urls)}][/bold cyan] {url[:80]}")
+
+        if _find_existing_note_by_url(url):
+            console.print(f"[yellow]Skipping duplicate:[/yellow] already in vault")
+            skipped += 1
+            continue
+
+        try:
+            cmd_add(url)
+            processed += 1
+        except Exception as exc:
+            console.print(f"[red]Failed:[/red] {exc}")
+            failed += 1
+            failed_urls.append(url)
+
+    summary = (
+        f"[green]✓ Processed:[/green] {processed}\n"
+        f"[yellow]⊘ Skipped (duplicates):[/yellow] {skipped}\n"
+        f"[red]✗ Failed:[/red] {failed}"
+    )
+    if failed_urls:
+        summary += "\n\n[bold red]Failed URLs:[/bold red]\n" + "\n".join(f"  {u}" for u in failed_urls)
+    console.print(Panel(summary, title="Batch Complete"))
+
+
+def cmd_enrich():
+    """Fill empty sections across all vault notes using Claude."""
+    from pipeline.enricher import enrich_all
+    enrich_all()
+
+
+def cmd_reindex():
+    """Rebuild the semantic embeddings index from all existing vault notes."""
+    from pipeline.vault_writer import reindex_vault_embeddings
+    reindex_vault_embeddings()
+
+
+def cmd_serve(port: int = 8000):
+    """Launch the Sales Pro web UI."""
+    try:
+        import uvicorn
+    except ImportError:
+        console.print("[red]uvicorn not installed.[/red] Run: pip install 'fastapi[standard]' uvicorn")
+        return
+
+    console.print(Panel(
+        f"[bold green]Sales Pro Web UI[/bold green]\n"
+        f"Open [link=http://localhost:{port}]http://localhost:{port}[/link] in your browser\n"
+        f"Press [bold]Ctrl+C[/bold] to stop",
+        title="Sales Pro",
+    ))
+
+    from web.app import app
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")
+
+
 def cmd_brain():
     """Show brain stats."""
     import config
@@ -81,23 +163,40 @@ def main():
     parser = argparse.ArgumentParser(description="Sales Pro — Instagram → Sales Brain")
     sub = parser.add_subparsers(dest="command")
 
-    add_p = sub.add_parser("add", help="Add an Instagram video to the brain")
-    add_p.add_argument("url", help="Instagram video URL")
+    add_p = sub.add_parser("add", help="Add a video to the brain")
+    add_p.add_argument("url", help="Instagram or YouTube video URL")
+
+    batch_p = sub.add_parser("batch", help="Process multiple URLs from a text file")
+    batch_p.add_argument("filepath", help="Path to text file with one URL per line")
 
     sub.add_parser("script", help="Generate a sales script from the brain")
     sub.add_parser("brain", help="Show brain stats")
+    sub.add_parser("enrich", help="Fill empty sections in all vault notes using Claude")
+    sub.add_parser("reindex", help="Rebuild the semantic embeddings index")
+
+    serve_p = sub.add_parser("serve", help="Launch the web UI")
+    serve_p.add_argument("--port", type=int, default=8000, help="Port to listen on (default: 8000)")
 
     args = parser.parse_args()
 
     if args.command == "add":
         cmd_add(args.url)
+    elif args.command == "batch":
+        cmd_batch(args.filepath)
     elif args.command == "script":
         cmd_script()
     elif args.command == "brain":
         cmd_brain()
+    elif args.command == "enrich":
+        cmd_enrich()
+    elif args.command == "reindex":
+        cmd_reindex()
+    elif args.command == "serve":
+        cmd_serve(args.port)
     else:
         parser.print_help()
 
 
 if __name__ == "__main__":
     main()
+

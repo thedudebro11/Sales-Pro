@@ -77,15 +77,66 @@ def load_vault_knowledge() -> str:
         sections.append(f"\n## {folder_name.upper()} ({len(files)} notes)\n")
         for f in sorted(files):
             content = f.read_text(encoding="utf-8")
-            # truncate very long notes (transcripts) to keep context manageable
             if len(content) > 2000:
                 content = content[:2000] + "\n…[truncated]"
             sections.append(f"### {f.stem}\n{content}\n")
 
     if not sections:
-        return "No sales intelligence loaded yet. Run `python main.py <url>` first to populate the brain."
+        return "No sales intelligence loaded yet. Run `python main.py add <url>` first to populate the brain."
 
     return "\n".join(sections)
+
+
+def load_vault_knowledge_semantic(query: str, top_k: int = 15) -> str:
+    """Load the top-K most topically relevant vault notes using semantic similarity."""
+    if not config.EMBEDDINGS_INDEX.exists():
+        return load_vault_knowledge()
+
+    try:
+        import json
+        import numpy as np
+        from sentence_transformers import SentenceTransformer
+    except ImportError:
+        return load_vault_knowledge()
+
+    try:
+        console.print("[dim]Loading embedding model for semantic retrieval…[/dim]")
+        model = SentenceTransformer(config.EMBED_MODEL)
+        query_vec = model.encode(query)
+
+        entries = []
+        with open(config.EMBEDDINGS_INDEX, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if line:
+                    entries.append(json.loads(line))
+
+        if not entries:
+            return load_vault_knowledge()
+
+        embeddings = np.array([e["embedding"] for e in entries])
+        norms = np.linalg.norm(embeddings, axis=1) * np.linalg.norm(query_vec) + 1e-9
+        sims = np.dot(embeddings, query_vec) / norms
+        top_indices = sims.argsort()[::-1][:top_k]
+
+        sections = []
+        for idx in top_indices:
+            p = Path(entries[idx]["path"])
+            if not p.exists():
+                continue
+            content = p.read_text(encoding="utf-8")
+            if len(content) > 2000:
+                content = content[:2000] + "\n…[truncated]"
+            sections.append(f"### {p.stem}\n{content}\n")
+
+        if not sections:
+            return load_vault_knowledge()
+
+        console.print(f"[dim]Semantic retrieval: {len(sections)} relevant notes selected[/dim]")
+        return "\n".join(sections)
+
+    except Exception:
+        return load_vault_knowledge()
 
 
 def generate_script(
@@ -98,7 +149,8 @@ def generate_script(
     client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
 
     console.print("[cyan]Loading sales brain knowledge…[/cyan]")
-    knowledge = load_vault_knowledge()
+    query = f"{product} {audience} {goal}"
+    knowledge = load_vault_knowledge_semantic(query)
     console.print(f"[dim]Brain context: {len(knowledge.split()):,} words[/dim]")
 
     console.print("[cyan]Generating ultimate sales script…[/cyan]")
