@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Source Analysis",
+  "type": "object",
+  "properties": {
+    "source_summary": {
+      "type": "string"
+    },
+    "useful_tactics": {
+      "type": "array"
+    },
+    "phrases_worth_saving": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "phrases_to_avoid": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "claims_extracted": {
+      "type": "array"
+    }
+  }
+}

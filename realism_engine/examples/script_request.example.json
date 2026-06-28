@@ -1,0 +1,12 @@
+{
+  "product": "Website rebuilds, website optimization, and Google Business Profile optimization",
+  "audience": "Small service business owners who may be losing calls because their website is outdated, unclear, slow, or disconnected from their Google Business Profile",
+  "platform": "Cold call and cold email",
+  "tone": "Helpful local operator, direct, realistic, consultative, not hypey",
+  "goal": "Book a free 15-minute Website + Google Business Profile audit",
+  "city": "Tucson, AZ",
+  "proof_inventory_path": "examples/proof_inventory.local_web_gbp.md",
+  "approved_claim_bank_path": "examples/approved_claims.local_web_gbp.md",
+  "banned_claim_bank_path": "examples/banned_claims.local_web_gbp.md",
+  "observed_issues_path": "examples/observed_issues.example.md"
+}

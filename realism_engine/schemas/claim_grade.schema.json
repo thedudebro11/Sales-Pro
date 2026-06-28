@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Claim Grade Output",
+  "type": "object",
+  "required": [
+    "claim_grade_table",
+    "approved_claim_bank",
+    "banned_claim_bank",
+    "needs_proof_later"
+  ],
+  "properties": {
+    "claim_grade_table": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "original_claim",
+          "grade",
+          "why",
+          "safe_rewrite"
+        ],
+        "properties": {
+          "original_claim": {
+            "type": "string"
+          },
+          "grade": {
+            "enum": [
+              "GREEN",
+              "YELLOW",
+              "RED"
+            ]
+          },
+          "why": {
+            "type": "string"
+          },
+          "safe_rewrite": {
+            "type": "string"
+          },
+          "usable_in_cold_call": {
+            "type": "boolean"
+          },
+          "usable_in_cold_email": {
+            "type": "boolean"
+          },
+          "proof_needed_to_upgrade": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "approved_claim_bank": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "banned_claim_bank": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "needs_proof_later": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

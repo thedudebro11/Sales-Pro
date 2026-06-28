@@ -85,6 +85,39 @@
     .stat { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 0.75rem; text-align: center; }
     .stat-num { font-size: 1.5rem; font-weight: 700; color: var(--accent); letter-spacing: -0.03em; }
     .stat-label { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+    .realistic-badge {
+      display: inline-block; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--accent); border: 1px solid var(--accent);
+      border-radius: 5px; padding: 0.15rem 0.5rem; margin-bottom: 1rem;
+    }
+    .drop-zone {
+      border: 2px dashed var(--border); border-radius: 9px; padding: 1.1rem;
+      text-align: center; color: var(--muted); font-size: 0.82rem;
+      transition: border-color 0.15s, background 0.15s; margin-top: 0.5rem;
+    }
+    .drop-zone.drag-over { border-color: var(--accent); background: #1a1030; color: var(--text); }
+    .drop-zone input[type="file"] { display: none; }
+    .drop-btns { display: flex; gap: 0.5rem; justify-content: center; margin-top: 0.6rem; }
+    .drop-btn {
+      padding: 0.28rem 0.75rem; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--muted); font-size: 0.76rem; cursor: pointer;
+      font-family: inherit; transition: border-color 0.15s, color 0.15s;
+    }
+    .drop-btn:hover { border-color: var(--accent); color: var(--text); }
+    .file-list { margin-top: 0.5rem; font-size: 0.76rem; color: var(--muted); }
+    .file-list-item { display: flex; gap: 0.4rem; padding: 0.15rem 0; }
+    .file-list-item .ck { color: var(--green); }
+    .step-log {
+      display: none; margin-top: 1.25rem; background: #000;
+      border: 1px solid var(--border); border-radius: 9px;
+      padding: 1rem 1.1rem; font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.8rem; line-height: 1.7; min-height: 80px; max-height: 200px; overflow-y: auto;
+    }
+    .step-row { display: flex; gap: 0.6rem; align-items: baseline; }
+    .step-num { color: var(--accent); font-weight: 700; min-width: 2.5rem; }
+    .step-msg { color: var(--muted); }
+    .step-msg.done { color: var(--green); }
+    .step-msg.error { color: var(--red); }
   </style>
 </head>
 <body>
@@ -97,6 +130,7 @@
     <div class="tabs">
       <button class="tab active" data-tab="add" onclick="switchTab('add')">Add Video</button>
       <button class="tab" data-tab="script" onclick="switchTab('script')">Generate Script</button>
+      <button class="tab" data-tab="realistic" onclick="switchTab('realistic')">✦ Realistic Script</button>
     </div>
 
     <!-- ADD VIDEO -->
@@ -148,6 +182,66 @@
           <button type="submit" class="btn-primary" id="script-btn">Generate Script</button>
         </form>
         <pre class="script-out" id="script-out"></pre>
+      </div>
+    </div>
+    <!-- REALISTIC SCRIPT -->
+    <div id="panel-realistic" class="panel">
+      <div class="card">
+        <div class="realistic-badge">✦ Realistic Mode — 7-Step Pipeline</div>
+        <form onsubmit="submitRealistic(event)">
+          <div class="form-group">
+            <label for="r-product">What are you selling?</label>
+            <input id="r-product" type="text" placeholder="Website rebuilds, optimization, GBP optimization" required>
+          </div>
+          <div class="form-group">
+            <label for="r-audience">Target audience</label>
+            <input id="r-audience" type="text" placeholder="Small business owners who may be losing calls online" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="r-city">City</label>
+              <input id="r-city" type="text" placeholder="Tucson, AZ">
+            </div>
+            <div class="form-group">
+              <label for="r-industry">Industry</label>
+              <input id="r-industry" type="text" placeholder="nail salon, HVAC, dentist…">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="r-target">Target business name (optional)</label>
+            <input id="r-target" type="text" placeholder="Retro Nail Bar">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="r-platform">Platform</label>
+              <input id="r-platform" type="text" placeholder="Cold call and cold email">
+            </div>
+            <div class="form-group">
+              <label for="r-goal">Goal / CTA</label>
+              <input id="r-goal" type="text" placeholder="Book a free 15-min audit">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="r-issues">Observed issues</label>
+            <textarea id="r-issues" placeholder="LCP 10.4s — slow mobile load&#10;Unanswered 1-star review on GBP&#10;No booking button on profile&#10;Sparse attributes section"></textarea>
+            <div class="drop-zone" id="drop-zone"
+              ondragover="event.preventDefault(); this.classList.add('drag-over')"
+              ondragleave="this.classList.remove('drag-over')"
+              ondrop="handleFileDrop(event)">
+              <input type="file" id="file-input" accept=".txt,.md,.json,.csv" multiple onchange="handleFileSelect(event)">
+              <input type="file" id="dir-input" webkitdirectory onchange="handleDirSelect(event)">
+              Drop files or a whole folder here
+              <div class="drop-btns">
+                <button type="button" class="drop-btn" onclick="document.getElementById('file-input').click()">Choose files</button>
+                <button type="button" class="drop-btn" onclick="document.getElementById('dir-input').click()">Choose folder</button>
+              </div>
+            </div>
+            <div class="file-list" id="file-list"></div>
+          </div>
+          <button type="submit" class="btn-primary" id="realistic-btn">Generate Realistic Script</button>
+        </form>
+        <div class="step-log" id="step-log"></div>
+        <pre class="script-out" id="realistic-out"></pre>
       </div>
     </div>
   </div>
@@ -327,6 +421,166 @@
     }
 
     loadBrainStats();
+
+    const ALLOWED = ['.txt', '.md', '.json', '.csv'];
+    const allowed = name => ALLOWED.some(e => name.toLowerCase().endsWith(e));
+
+    async function handleFileDrop(ev) {
+      ev.preventDefault();
+      document.getElementById('drop-zone').classList.remove('drag-over');
+      const entries = [...ev.dataTransfer.items]
+        .map(i => i.webkitGetAsEntry?.()).filter(Boolean);
+      const files = [];
+      for (const entry of entries) files.push(...await readEntry(entry));
+      applyFiles(files);
+    }
+
+    async function handleFileSelect(ev) {
+      const files = await Promise.all(
+        [...ev.target.files].filter(f => allowed(f.name)).map(readPlainFile)
+      );
+      applyFiles(files.filter(Boolean));
+    }
+
+    async function handleDirSelect(ev) {
+      const files = await Promise.all(
+        [...ev.target.files].filter(f => allowed(f.name)).map(readPlainFile)
+      );
+      applyFiles(files.filter(Boolean));
+    }
+
+    async function readPlainFile(file) {
+      return new Promise(resolve => {
+        const r = new FileReader();
+        r.onload = e => resolve({ name: file.name, text: e.target.result });
+        r.onerror = () => resolve(null);
+        r.readAsText(file);
+      });
+    }
+
+    async function readEntry(entry) {
+      if (entry.isFile) {
+        if (!allowed(entry.name)) return [];
+        return new Promise(resolve => {
+          entry.file(f => {
+            const r = new FileReader();
+            r.onload = e => resolve([{ name: entry.fullPath || entry.name, text: e.target.result }]);
+            r.onerror = () => resolve([]);
+            r.readAsText(f);
+          });
+        });
+      }
+      if (entry.isDirectory) {
+        const results = [], reader = entry.createReader();
+        const batch = () => new Promise((res, rej) => reader.readEntries(res, rej));
+        let chunk;
+        do {
+          chunk = await batch();
+          for (const child of chunk) results.push(...await readEntry(child));
+        } while (chunk.length > 0);
+        return results;
+      }
+      return [];
+    }
+
+    function applyFiles(files) {
+      if (!files.length) return;
+      document.getElementById('r-issues').value =
+        files.map(f => `--- ${f.name} ---\n${f.text.trim()}`).join('\n\n');
+      document.getElementById('file-list').innerHTML =
+        files.map(f => `<div class="file-list-item"><span class="ck">✓</span>${f.name}</div>`).join('');
+    }
+
+    async function submitRealistic(e) {
+      e.preventDefault();
+      const btn  = document.getElementById('realistic-btn');
+      const log  = document.getElementById('step-log');
+      const out  = document.getElementById('realistic-out');
+
+      log.innerHTML = '';
+      log.style.display = 'block';
+      out.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Running pipeline…';
+
+      const steps = [
+        'Extracting claims from vault knowledge',
+        'Grading claims against proof inventory',
+        'Generating safe script draft',
+        'Running field realism filter',
+        'Running compliance filter',
+        'Packaging final output',
+        'Saving to vault',
+      ];
+
+      // Pre-render all steps as pending
+      steps.forEach((s, i) => {
+        const row = document.createElement('div');
+        row.className = 'step-row';
+        row.id = `step-${i+1}`;
+        row.innerHTML = `<span class="step-num">[${i+1}/7]</span><span class="step-msg" id="step-msg-${i+1}">${s}…</span>`;
+        log.appendChild(row);
+      });
+
+      try {
+        const res = await fetch('/api/realistic-script', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            product:          document.getElementById('r-product').value,
+            audience:         document.getElementById('r-audience').value,
+            platform:         document.getElementById('r-platform').value || 'Cold call and cold email',
+            tone:             'Helpful local operator, direct, realistic, consultative, not hypey',
+            goal:             document.getElementById('r-goal').value     || 'Book a free 15-minute Website + Google Business Profile audit',
+            city:             document.getElementById('r-city').value,
+            industry:         document.getElementById('r-industry').value,
+            target_business:  document.getElementById('r-target').value,
+            observed_issues:  document.getElementById('r-issues').value,
+          }),
+        });
+
+        const reader = res.body.getReader();
+        const dec = new TextDecoder();
+        let buf = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          const blocks = buf.split('\n\n');
+          buf = blocks.pop() ?? '';
+          for (const block of blocks) {
+            if (!block.startsWith('data: ')) continue;
+            const { stage, message } = JSON.parse(block.slice(6));
+            if (stage === 'step') {
+              const { n } = JSON.parse(message);
+              const el = document.getElementById(`step-msg-${n}`);
+              if (el) el.classList.add('done');
+            } else if (stage === 'done') {
+              steps.forEach((_, i) => {
+                const el = document.getElementById(`step-msg-${i+1}`);
+                if (el) el.classList.add('done');
+              });
+              out.textContent = message;
+              out.style.display = 'block';
+              out.scrollIntoView({ behavior: 'smooth' });
+            } else if (stage === 'error') {
+              const err = document.createElement('div');
+              err.className = 'step-row';
+              err.innerHTML = `<span class="step-num">✗</span><span class="step-msg error">${message}</span>`;
+              log.appendChild(err);
+            }
+          }
+        }
+      } catch (err) {
+        const el = document.createElement('div');
+        el.className = 'step-row';
+        el.innerHTML = `<span class="step-num">✗</span><span class="step-msg error">${err.message}</span>`;
+        log.appendChild(el);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate Realistic Script';
+      }
+    }
   </script>
 </body>
 </html>

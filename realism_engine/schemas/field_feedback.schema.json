@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Field Feedback",
+  "type": "object",
+  "properties": {
+    "what_happened": {
+      "type": "string"
+    },
+    "prospect_reactions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "objections_heard": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "phrases_that_worked": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "phrases_that_failed": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "updated_script_recommendation": {
+      "type": "string"
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Realistic Script Request",
+  "type": "object",
+  "required": [
+    "product",
+    "audience",
+    "platform",
+    "tone",
+    "goal"
+  ],
+  "properties": {
+    "product": {
+      "type": "string"
+    },
+    "audience": {
+      "type": "string"
+    },
+    "platform": {
+      "type": "string"
+    },
+    "tone": {
+      "type": "string"
+    },
+    "goal": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "industry": {
+      "type": "string"
+    },
+    "target_business": {
+      "type": "string"
+    },
+    "observed_issues": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

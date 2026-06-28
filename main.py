@@ -143,6 +143,58 @@ def cmd_serve(port: int = 8000):
     uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")
 
 
+def cmd_realistic_script():
+    """Interactive 7-step realistic script generator with claim grading and compliance filter."""
+    from agent.realistic_sales_agent import RealisticScriptRequest, generate_realistic_script
+
+    console.print(Panel(
+        "[bold]Realistic Script Generator[/bold]\n"
+        "7-step pipeline: claim grading → realism filter → compliance filter\n"
+        "No guarantees. No fake stats. No guru language.",
+        title="Sales Pro — Realistic Mode",
+    ))
+
+    product  = console.input("[bold]What are you selling?[/bold] → ")
+    audience = console.input("[bold]Who is your target audience?[/bold] → ")
+    platform = console.input("[bold]Platform/context[/bold] (default: Cold call and cold email): ").strip() \
+               or "Cold call and cold email"
+    tone     = console.input("[bold]Tone[/bold] (default: Helpful local operator, direct, realistic): ").strip() \
+               or "Helpful local operator, direct, realistic, consultative, not hypey"
+    goal     = console.input("[bold]Goal / CTA[/bold] (default: Book a free 15-min audit): ").strip() \
+               or "Book a free 15-minute Website + Google Business Profile audit"
+    city     = console.input("[bold]City[/bold] (e.g. Tucson, AZ): ").strip()
+    industry = console.input("[bold]Industry[/bold] (e.g. local service businesses): ").strip()
+    target   = console.input("[bold]Target business name[/bold] (optional, press Enter to skip): ").strip()
+
+    console.print("[dim]Observed issues (one per line, blank line when done):[/dim]")
+    issues_lines: list[str] = []
+    while True:
+        line = console.input("  → ")
+        if not line.strip():
+            break
+        p = Path(line.strip())
+        if p.exists():
+            issues_lines.append(p.read_text(encoding="utf-8"))
+        else:
+            issues_lines.append(line.strip())
+    observed_issues = "\n".join(issues_lines)
+
+    req = RealisticScriptRequest(
+        product=product,
+        audience=audience,
+        platform=platform,
+        tone=tone,
+        goal=goal,
+        city=city,
+        industry=industry,
+        target_business=target,
+        observed_issues=observed_issues,
+    )
+
+    final = generate_realistic_script(req)
+    console.print(Panel(final, title=f"Realistic Script: {product}", expand=False))
+
+
 def cmd_brain():
     """Show brain stats."""
     import config
@@ -170,6 +222,7 @@ def main():
     batch_p.add_argument("filepath", help="Path to text file with one URL per line")
 
     sub.add_parser("script", help="Generate a sales script from the brain")
+    sub.add_parser("realistic-script", help="Generate a realistic, claim-filtered script (7-step pipeline)")
     sub.add_parser("brain", help="Show brain stats")
     sub.add_parser("enrich", help="Fill empty sections in all vault notes using Claude")
     sub.add_parser("reindex", help="Rebuild the semantic embeddings index")
@@ -185,6 +238,8 @@ def main():
         cmd_batch(args.filepath)
     elif args.command == "script":
         cmd_script()
+    elif args.command == "realistic-script":
+        cmd_realistic_script()
     elif args.command == "brain":
         cmd_brain()
     elif args.command == "enrich":

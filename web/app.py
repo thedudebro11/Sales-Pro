@@ -7,7 +7,7 @@ import threading
 import tempfile
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
 from pydantic import BaseModel
 
@@ -32,6 +32,17 @@ class ScriptRequest(BaseModel):
     platform: str = "Instagram Reels / TikTok"
     tone: str = "Conversational and confident"
     goal: str = "Book a call / DM for more info"
+
+class RealisticScriptWebRequest(BaseModel):
+    product: str
+    audience: str
+    platform: str = "Cold call and cold email"
+    tone: str = "Helpful local operator, direct, realistic, consultative, not hypey"
+    goal: str = "Book a free 15-minute Website + Google Business Profile audit"
+    city: str = ""
+    industry: str = ""
+    target_business: str = ""
+    observed_issues: str = ""
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
@@ -129,6 +140,39 @@ async def api_script(req: ScriptRequest):
         lambda: generate_script(req.product, req.audience, req.platform, req.tone, req.goal),
     )
     return JSONResponse({"script": script})
+
+
+def _run_realistic_pipeline(req_data: dict, q: "queue.Queue[str | None]"):
+    from agent.realistic_sales_agent import RealisticScriptRequest, generate_realistic_script
+
+    def on_step(n: int, msg: str):
+        q.put(_sse("step", json.dumps({"n": n, "msg": msg})))
+
+    try:
+        req = RealisticScriptRequest(**req_data)
+        final = generate_realistic_script(req, on_step=on_step)
+        q.put(_sse("done", final))
+    except Exception as exc:
+        q.put(_sse("error", str(exc)))
+    finally:
+        q.put(None)
+
+
+@app.post("/api/realistic-script")
+async def api_realistic_script(req: RealisticScriptWebRequest):
+    q: queue.Queue = queue.Queue()
+    threading.Thread(target=_run_realistic_pipeline, args=(req.dict(), q), daemon=True).start()
+    return StreamingResponse(_stream_queue(q), media_type="text/event-stream")
+
+
+@app.post("/api/upload-issues")
+async def api_upload_issues(file: UploadFile = File(...)):
+    raw = await file.read()
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        text = raw.decode("latin-1")
+    return JSONResponse({"text": text})
 
 
 @app.get("/api/brain")
